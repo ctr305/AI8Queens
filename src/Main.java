@@ -23,16 +23,32 @@ public class Main {
 
         System.out.println("\nCollisions: " + collisions);
 
+        ArrayList<String> bestPerformer = queens;
+        int lowestCollisions = collisions;
+
         while(collisions > 0) {
             ArrayList<String> newQueens = relocateRandomQueen(queens);
             if(countCollisions(newQueens) < collisions) {
                 queens = newQueens;
                 collisions = countCollisions(queens);
-                System.out.println("Collisions: " + collisions);
+                bestPerformer = queens;
+                if (collisions < lowestCollisions) {
+                    lowestCollisions = collisions;
+                    System.out.println("\nNew lowest collisions: " + collisions);
+                    generateASCIIBoard(queens);
+                }
+            } else {
+                queens = combineParents(generateRandomQueens(chessBoard), bestPerformer);
+                collisions = countCollisions(queens);
             }
         }
 
+        System.out.println("\nFinal board:");
+
         generateASCIIBoard(queens);
+        for (String queen : queens) {
+            System.out.println(queen);
+        }
     }
 
     private static ArrayList<String> generateRandomQueens(ArrayList<String> board) {
@@ -119,5 +135,55 @@ public class Main {
             queens.add(oldCoordinate);
             return relocateRandomQueen(queens);
         }
+    }
+
+    private static ArrayList<String> combineParents(ArrayList<String> parent1, ArrayList<String> parent2) {
+        ArrayList<String> child = new ArrayList<>();
+        for (int i = 0; i < parent1.size(); i++) {
+            if(Math.random() < 0.5) {
+                if (!child.contains(parent1.get(i))) {
+                    child.add(parent1.get(i));
+                } else if (!child.contains(parent2.get(i))) {
+                    child.add(parent2.get(i));
+                }
+            } else {
+                if (!child.contains(parent2.get(i))) {
+                    child.add(parent2.get(i));
+                } else if (!child.contains(parent1.get(i))) {
+                    child.add(parent1.get(i));
+                }
+            }
+        }
+
+        child = deduplicate(child);
+
+        if (child.size() != 8) {
+            child = fixSolution(child);
+        }
+
+        return child;
+    }
+
+    private static ArrayList<String> fixSolution(ArrayList<String> child) {
+        while (child.size() != 8) {
+            if (child.size() > 8) {
+                child.remove((int) (Math.random() * child.size()));
+            } else {
+                child.add(generateRandomCoordinate());
+            }
+            child = deduplicate(child);
+        }
+        return child;
+    }
+
+    private static ArrayList<String> deduplicate(ArrayList<String> child) {
+        for (int i = 0; i < child.size(); i++) {
+            for (int j = i + 1; j < child.size(); j++) {
+                if (child.get(i).equals(child.get(j))) {
+                    child.remove(j);
+                }
+            }
+        }
+        return child;
     }
 }

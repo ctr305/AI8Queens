@@ -2,10 +2,16 @@ import java.util.ArrayList;
 
 public class Main {
 
+    private static final double MUTATION_CHANCE = 1.0;
+    private static final double COMBINATION_CHANCE = 1.0;
+    private static final int MAX_POPULATION_SIZE = 50;
+    private static final double PARENT_PERCENTAGE = 0.4;
+    private static final double DECREMENT = 1.0 / (MAX_POPULATION_SIZE + 1);
+    private static final int MAX_GENERATIONS = 10000;
+
     public static void main(String[] args) {
 
         ArrayList<String> chessBoard = new ArrayList<>();
-        int collisions;
 
         for (int row = 1; row <= 8; row++) {
             for (char col = 'a'; col <= 'h'; col++) {
@@ -14,41 +20,82 @@ public class Main {
             }
         }
 
-        ArrayList<String> queens = generateRandomQueens(chessBoard);
+        ArrayList<ArrayList<String>> population = new ArrayList<>();
+        for (int i = 0; i < MAX_POPULATION_SIZE; i++) {
+            population.add(generateRandomQueens(chessBoard));
+        }
 
-        collisions = countCollisions(queens);
+        population = sortByAptitude(population);
+        int generation = 0;
 
-        System.out.println("Initial board:");
-        generateASCIIBoard(queens);
+        while (countCollisions(population.get(0)) > 0 && generation < MAX_GENERATIONS) {
+            ArrayList<ArrayList<String>> newPopulation = new ArrayList<>();
+            ArrayList<ArrayList<String>> parents = new ArrayList<>();
+            ArrayList<Double> parentChance = new ArrayList<>();
 
-        System.out.println("\nCollisions: " + collisions);
-
-        ArrayList<String> bestPerformer = queens;
-        int lowestCollisions = collisions;
-
-        while(collisions > 0) {
-            ArrayList<String> newQueens = relocateRandomQueen(queens);
-            if(countCollisions(newQueens) < collisions) {
-                queens = newQueens;
-                collisions = countCollisions(queens);
-                bestPerformer = queens;
-                if (collisions < lowestCollisions) {
-                    lowestCollisions = collisions;
-                    System.out.println("\nNew lowest collisions: " + collisions);
-                    generateASCIIBoard(queens);
-                }
-            } else {
-                queens = combineParents(generateRandomQueens(chessBoard), bestPerformer);
-                collisions = countCollisions(queens);
+            for (int j = 0; j < MAX_POPULATION_SIZE * PARENT_PERCENTAGE; j++) {
+                parents.add(population.get(j));
             }
+
+            for (int j = 0; j < parents.size(); j++) {
+                parentChance.add(1.0 - (j * DECREMENT));
+            }
+
+            for (int i = 0; i < MAX_POPULATION_SIZE; i++) {
+                if (Math.random() < COMBINATION_CHANCE) {
+                                        int parentIndex1 = -1;
+                    int parentIndex2 = -1;
+
+                    do {
+                        for (int j = 0; j < parentChance.size(); j++) {
+                            if (Math.random() < parentChance.get(j)) {
+                                parentIndex1 = j;
+                                break;
+                            }
+                        }
+                        for (int j = 0; j < parentChance.size(); j++) {
+                            if (Math.random() < parentChance.get(j)) {
+                                if (j != parentIndex1) {
+                                    parentIndex2 = j;
+                                    break;
+                                }
+                            }
+                        }
+                    } while (parentIndex1 == -1 || parentIndex2 == -1);
+
+                    ArrayList<String> parent1 = parents.get(parentIndex1);
+                    ArrayList<String> parent2 = parents.get(parentIndex2);
+                    ArrayList<String> child = combineParents(parent1, parent2);
+                    newPopulation.add(child);
+                    if (newPopulation.size() < MAX_POPULATION_SIZE) {
+                        newPopulation.add(mutate(child, MUTATION_CHANCE));
+                    }
+                } else {
+                    ArrayList<String> randomParent = parents.get((int) (Math.random() * parents.size()));
+                    newPopulation.add(randomParent);
+                }
+            }
+            population = sortByAptitude(newPopulation);
+            System.out.println("Generation: " + generation + " | Collisions: " + countCollisions(population.get(0)));
+            generation++;
         }
 
         System.out.println("\nFinal board:");
+        generateASCIIBoard(population.get(0));
+        System.out.println("Collisions: " + countCollisions(population.get(0)));
+    }
 
-        generateASCIIBoard(queens);
-        for (String queen : queens) {
-            System.out.println(queen);
+    private static ArrayList<ArrayList<String>> sortByAptitude(ArrayList<ArrayList<String>> population) {
+        for (int i = 0; i < population.size(); i++) {
+            for (int j = i + 1; j < population.size(); j++) {
+                if (countCollisions(population.get(i)) > countCollisions(population.get(j))) {
+                    ArrayList<String> temp = population.get(i);
+                    population.set(i, population.get(j));
+                    population.set(j, temp);
+                }
+            }
         }
+        return population;
     }
 
     private static ArrayList<String> generateRandomQueens(ArrayList<String> board) {
@@ -123,18 +170,20 @@ public class Main {
         }
     }
 
-    private static ArrayList<String> relocateRandomQueen(ArrayList<String> queens) {
-        int rand = (int) (Math.random() * queens.size());
-        String oldCoordinate = queens.get(rand);
-        queens.remove(rand);
-        String newCoordinate = generateRandomCoordinate();
-        if(!queens.contains(newCoordinate) && !newCoordinate.equals(oldCoordinate)) {
-            queens.add(newCoordinate);
-            return queens;
-        } else {
-            queens.add(oldCoordinate);
-            return relocateRandomQueen(queens);
+    private static ArrayList<String> mutate(ArrayList<String> queens, double relocationChance) {
+        if (Math.random() < relocationChance) {
+            int rand = (int) (Math.random() * queens.size());
+            String oldCoordinate = queens.get(rand);
+            queens.remove(rand);
+            String newCoordinate = generateRandomCoordinate();
+            if(!queens.contains(newCoordinate) && !newCoordinate.equals(oldCoordinate)) {
+                queens.add(newCoordinate);
+            } else {
+                queens.add(oldCoordinate);
+                queens = mutate(queens, relocationChance);
+            }
         }
+        return queens;
     }
 
     private static ArrayList<String> combineParents(ArrayList<String> parent1, ArrayList<String> parent2) {
@@ -173,6 +222,7 @@ public class Main {
             }
             child = deduplicate(child);
         }
+
         return child;
     }
 
@@ -186,4 +236,6 @@ public class Main {
         }
         return child;
     }
+
+
 }

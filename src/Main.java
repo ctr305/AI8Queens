@@ -76,13 +76,12 @@ public class Main {
                 }
             }
             population = sortByAptitude(newPopulation);
-            System.out.println("Generation: " + generation + " | Collisions: " + countCollisions(population.get(0)));
+            System.out.println("Generation: " + generation + "\t | Collisions: " + countCollisions(population.get(0)));
             generation++;
         }
 
         System.out.println("\nFinal board:");
         generateASCIIBoard(population.get(0));
-        System.out.println("Collisions: " + countCollisions(population.get(0)));
     }
 
     private static ArrayList<ArrayList<String>> sortByAptitude(ArrayList<ArrayList<String>> population) {
@@ -236,6 +235,4 @@ public class Main {
         }
         return child;
     }
-
-
 }
